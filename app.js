@@ -71,6 +71,24 @@ const ADVICE_DATA = {
   }
 };
 
+// スコア50の基準線を描画するChart.jsプラグイン
+const line50Plugin = {
+  id: "line50",
+  afterDatasetsDraw(chart) {
+    const { ctx, chartArea: { top, bottom }, scales: { x } } = chart;
+    const xPos = x.getPixelForValue(50);
+    ctx.save();
+    ctx.beginPath();
+    ctx.setLineDash([4, 4]);
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.7)";
+    ctx.lineWidth = 1.5;
+    ctx.moveTo(xPos, top);
+    ctx.lineTo(xPos, bottom);
+    ctx.stroke();
+    ctx.restore();
+  }
+};
+
 let chartInstance = null;
 
 const clamp = (val, min, max) => Math.max(min, Math.min(max, val));
@@ -139,7 +157,7 @@ document.getElementById("diagnosis-form").addEventListener("submit", async (e) =
 
   // 画面描画
   renderResult({
-    n30, n60, n100, actual3, target100, offset30_60,
+    t100, n30, n60, n100, actual3, target100, offset30_60,
     score1, score2, score3, typeKey, adviceKey
   });
 
@@ -172,8 +190,12 @@ function renderResult(data) {
   document.getElementById("type-catchcopy").textContent = typeInfo.catchcopy;
   document.getElementById("type-desc").textContent = typeInfo.description;
   document.getElementById("type-image").src = typeInfo.image;
-  document.getElementById("card-summary-time").textContent =
-    `100m: ${data.n100.toFixed(2)}s → 目標: ${data.target100.toFixed(2)}s`;
+
+  // 入力タイムをそのまま表示（補正がある場合のみ併記）
+  const timeText = data.t100 !== data.n100
+    ? `100m: ${data.t100.toFixed(2)}s (換算:${data.n100.toFixed(2)}s) → 目標: ${data.target100.toFixed(2)}s`
+    : `100m: ${data.t100.toFixed(2)}s → 目標: ${data.target100.toFixed(2)}s`;
+  document.getElementById("card-summary-time").textContent = timeText;
 
   // グラフ描画
   const ctx = document.getElementById("scoreChart").getContext("2d");
@@ -200,14 +222,18 @@ function renderResult(data) {
           min: 0,
           max: 100,
           grid: { color: "rgba(255,255,255,0.08)" },
-          ticks: { color: "#94a3b8" }
+          ticks: {
+            stepSize: 25,
+            color: "#94a3b8"
+          }
         },
         y: {
           grid: { display: false },
           ticks: { color: "#f1f5f9", font: { size: 12, weight: "bold" } }
         }
       }
-    }
+    },
+    plugins: [line50Plugin]
   });
 
   // 目標テーブル描画
