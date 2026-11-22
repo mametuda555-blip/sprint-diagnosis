@@ -49,12 +49,13 @@
 
         <!-- 計測条件（折りたたみ） -->
         <details class="options-accordion">
-          <summary>計測条件を細かく設定する（デフォルト：30/60m手動・動き出し、100m電気）</summary>
+          <summary>計測条件を細かく設定する（デフォルト：30/60m自己計測・動き出し、100m電気）</summary>
           <div class="options-content">
             <div class="option-row">
               <label for="timing30_60">30m・60mの計測方法</label>
               <select id="timing30_60">
-                <option value="manual" selected>手動（ストップウォッチ）</option>
+                <option value="self_manual" selected>手動（自己計測）</option>
+                <option value="manual">手動（計測員あり）</option>
                 <option value="auto">電気・光電管</option>
               </select>
             </div>
@@ -150,6 +151,6 @@
     </section>
   </div>
 
-  <script type="module" src="app.js?v=2"></script>
+  <script type="module" src="app.js?v=3"></script>
 </body>
 </html>
