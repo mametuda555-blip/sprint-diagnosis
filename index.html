@@ -14,7 +14,7 @@
   <meta property="og:site_name" content="SPRINT ANALYZER" />
   <meta name="twitter:card" content="summary_large_image" />
 
-  <link rel="stylesheet" href="style.css?v=3" />
+  <link rel="stylesheet" href="style.css?v=4" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 </head>
@@ -153,9 +153,32 @@
           <ul id="advice-menus"></ul>
         </div>
       </div>
+
+      <!-- 診断精度フィードバック -->
+      <div id="feedback-panel" class="panel feedback-panel">
+        <h3 class="section-title">📊 診断結果は感覚に合っていましたか？</h3>
+        <p class="section-note">精度向上のため、ワンタップでご協力お願いします。</p>
+
+        <div id="feedback-step1" class="feedback-buttons">
+          <button type="button" id="btn-fb-match" class="btn-fb btn-fb-yes">👍 感覚に合っている</button>
+          <button type="button" id="btn-fb-mismatch" class="btn-fb btn-fb-no">🤔 少し違う気がする</button>
+        </div>
+
+        <div id="feedback-step2" class="feedback-step2 hidden">
+          <p class="feedback-sublabel">ご自身の感覚に一番近いタイプはどれですか？</p>
+          <div class="feedback-type-grid">
+            <button type="button" class="btn-fb-type" data-type="rocket">🚀 ロケットスタート型</button>
+            <button type="button" class="btn-fb-type" data-type="top_speed">⚡ トップスピード特化型</button>
+            <button type="button" class="btn-fb-type" data-type="stamina">🔥 後半粘り型</button>
+            <button type="button" class="btn-fb-type" data-type="balance">⚖️ バランス型</button>
+          </div>
+        </div>
+
+        <p id="feedback-thanks" class="feedback-thanks hidden">ありがとうございます！診断精度の改善に活用させていただきます。</p>
+      </div>
     </section>
   </div>
 
-  <script type="module" src="app.js?v=3"></script>
+  <script type="module" src="app.js?v=4"></script>
 </body>
 </html>
