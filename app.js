@@ -109,9 +109,42 @@ const line50Plugin = {
 };
 
 let chartInstance = null;
+let lastDiagnosticId = null;
+let lastPredictedType = null;
 
 const clamp = (val, min, max) => Math.max(min, Math.min(max, val));
 const round2 = (val) => Math.round(val * 100) / 100;
+
+function resetFeedbackUI() {
+  document.getElementById("feedback-step1").classList.remove("hidden");
+  document.getElementById("feedback-step2").classList.add("hidden");
+  document.getElementById("feedback-thanks").classList.add("hidden");
+}
+
+async function submitFeedback(isMatch, perceivedType) {
+  document.getElementById("feedback-step1").classList.add("hidden");
+  document.getElementById("feedback-step2").classList.add("hidden");
+  document.getElementById("feedback-thanks").classList.remove("hidden");
+
+  trackEvent("feedback_submit", {
+    is_match: isMatch ? "yes" : "no",
+    predicted_type: lastPredictedType || "unknown",
+    perceived_type: perceivedType
+  });
+
+  try {
+    await push(ref(db, "feedbacks"), {
+      createdAt: serverTimestamp(),
+      modelVersion: "v1.1",
+      diagnosticId: lastDiagnosticId || null,
+      predictedType: lastPredictedType || null,
+      match: isMatch,
+      perceivedType
+    });
+  } catch (err) {
+    console.warn("Feedback save skipped:", err);
+  }
+}
 
 document.getElementById("diagnosis-form").addEventListener("submit", async (e) => {
   e.preventDefault();
@@ -174,6 +207,10 @@ document.getElementById("diagnosis-form").addEventListener("submit", async (e) =
     else adviceKey = "phase3";
   }
 
+  lastDiagnosticId = null;
+  lastPredictedType = typeKey;
+  resetFeedbackUI();
+
   // 画面描画
   renderResult({
     t100, n30, n60, n100, actual3, target100, offset30_60,
@@ -185,7 +222,7 @@ document.getElementById("diagnosis-form").addEventListener("submit", async (e) =
 
   // Firebaseへ匿名保存（ルール準拠）
   try {
-    await push(ref(db, "diagnostics"), {
+    const pushedRef = await push(ref(db, "diagnostics"), {
       createdAt: serverTimestamp(),
       modelVersion: "v1.1",
       raw: {
@@ -199,9 +236,27 @@ document.getElementById("diagnosis-form").addEventListener("submit", async (e) =
         score1, score2, score3, type: typeKey
       }
     });
+    lastDiagnosticId = pushedRef.key;
   } catch (err) {
     console.warn("Firebase save skipped:", err);
   }
+});
+
+// フィードバックボタンのイベント
+document.getElementById("btn-fb-match").addEventListener("click", () => {
+  submitFeedback(true, lastPredictedType || "unknown");
+});
+
+document.getElementById("btn-fb-mismatch").addEventListener("click", () => {
+  document.getElementById("feedback-step1").classList.add("hidden");
+  document.getElementById("feedback-step2").classList.remove("hidden");
+});
+
+document.querySelectorAll(".btn-fb-type").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    const perceivedType = btn.dataset.type;
+    submitFeedback(false, perceivedType);
+  });
 });
 
 function renderResult(data) {
@@ -333,13 +388,24 @@ document.getElementById("btn-save-img").addEventListener("click", async () => {
   link.click();
 });
 
-// Instagramでシェア
+// Instagramでシェア（URL自動コピー付き）
 document.getElementById("btn-share-ig").addEventListener("click", async (e) => {
   trackEvent("share_click", { platform: "instagram" });
   const btn = e.currentTarget;
   const originalText = btn.textContent;
-  btn.textContent = "画像を作成中...";
+  btn.textContent = "URLコピー＆画像作成中...";
   btn.disabled = true;
+
+  // 1. ユーザー操作直後にURLをクリップボードへコピー
+  let copied = false;
+  try {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      await navigator.clipboard.writeText(window.location.href);
+      copied = true;
+    }
+  } catch (err) {
+    console.warn("Clipboard copy skipped:", err);
+  }
 
   try {
     const card = document.getElementById("share-card");
@@ -352,6 +418,7 @@ document.getElementById("btn-share-ig").addEventListener("click", async (e) => {
     const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/png"));
     const file = new File([blob], "sprint-diagnosis.png", { type: "image/png" });
 
+    // 2. スマホの共有シートが使える場合
     if (navigator.canShare && navigator.canShare({ files: [file] })) {
       try {
         await navigator.share({
@@ -365,11 +432,16 @@ document.getElementById("btn-share-ig").addEventListener("click", async (e) => {
       }
     }
 
+    // 3. 共有シート非対応の場合は画像をダウンロード保存
     const link = document.createElement("a");
     link.download = "sprint-diagnosis.png";
     link.href = canvas.toDataURL("image/png");
     link.click();
-    alert("診断カードの画像を保存しました！Instagramアプリを開いてストーリーズや投稿に選択してください。");
+
+    const copyMsg = copied
+      ? "\nアプリのURLもコピーしました！ストーリーズの「リンク」スタンプにそのまま貼り付けできます。"
+      : "";
+    alert("診断カードの画像を保存しました！" + copyMsg);
   } catch (err) {
     alert("画像の作成に失敗しました。スクリーンショットで保存してください。");
   } finally {
