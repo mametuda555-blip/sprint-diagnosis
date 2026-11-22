@@ -270,13 +270,16 @@ function renderResult(data) {
   document.getElementById("advice-menus").innerHTML =
     adviceInfo.menus.map(m => `<li>${m}</li>`).join("");
 
-  // Xシェアリンク更新
-  const shareText = encodeURIComponent(
-    `100mスプリント診断の結果は【${typeInfo.name}】でした！\n前半:${data.score1}点 / 中盤:${data.score2}点 / 後半:${data.score3}点\n#陸上 #100m #スプリント診断`
-  );
+  // X・Threadsシェアリンク更新
+  const rawShareText = `100mスプリント診断の結果は【${typeInfo.name}】でした！\n前半:${data.score1}点 / 中盤:${data.score2}点 / 後半:${data.score3}点\n#陸上 #100m #スプリント診断`;
+  const shareText = encodeURIComponent(rawShareText);
   const shareUrl = encodeURIComponent(window.location.href);
+
   document.getElementById("btn-share-x").href =
     `https://twitter.com/intent/tweet?text=${shareText}&url=${shareUrl}`;
+
+  document.getElementById("btn-share-threads").href =
+    `https://www.threads.net/intent/post?text=${encodeURIComponent(rawShareText + "\n" + window.location.href)}`;
 
   // 表示＆スクロール
   const resultSec = document.getElementById("result-section");
@@ -296,4 +299,37 @@ document.getElementById("btn-save-img").addEventListener("click", async () => {
   link.download = "sprint-diagnosis.png";
   link.href = canvas.toDataURL("image/png");
   link.click();
+});
+
+// Instagramでシェア（スマホは共有メニューで画像を直接渡す／PCは画像保存）
+document.getElementById("btn-share-ig").addEventListener("click", async () => {
+  const card = document.getElementById("share-card");
+  const canvas = await html2canvas(card, {
+    backgroundColor: "#0b1020",
+    scale: 2,
+    useCORS: true
+  });
+
+  canvas.toBlob(async (blob) => {
+    const file = new File([blob], "sprint-diagnosis.png", { type: "image/png" });
+
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      try {
+        await navigator.share({
+          files: [file],
+          title: "100mスプリント診断",
+          text: "100mスプリント診断の結果！ #陸上 #100m"
+        });
+      } catch (err) {
+        // キャンセル時は何もしない
+      }
+    } else {
+      // PCや非対応ブラウザ向けフォールバック
+      const link = document.createElement("a");
+      link.download = "sprint-diagnosis.png";
+      link.href = canvas.toDataURL("image/png");
+      link.click();
+      alert("診断カードの画像を保存しました！Instagramアプリを開いてストーリーズや投稿に選択してください。");
+    }
+  }, "image/png");
 });
