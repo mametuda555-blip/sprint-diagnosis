@@ -1,5 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getDatabase, ref, push, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+import { getAnalytics, logEvent } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-analytics.js";
 
 // Firebase 初期化
 const firebaseConfig = {
@@ -9,11 +10,29 @@ const firebaseConfig = {
   projectId: "m-analysis-b6deb",
   storageBucket: "m-analysis-b6deb.firebasestorage.app",
   messagingSenderId: "717075517863",
-  appId: "1:717075517863:web:b30ce25e9cc2fa3b052682"
+  appId: "1:717075517863:web:b30ce25e9cc2fa3b052682",
+  measurementId: "G-3F1H0WF87Y"
 };
 
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
+
+// Analytics 初期化（広告ブロッカー等でもエラーで止まらないよう安全に処理）
+let analytics = null;
+try {
+  analytics = getAnalytics(app);
+} catch (err) {
+  console.warn("Analytics skipped:", err);
+}
+
+const trackEvent = (eventName, params = {}) => {
+  if (!analytics) return;
+  try {
+    logEvent(analytics, eventName, params);
+  } catch (err) {
+    // 無視
+  }
+};
 
 // タイプ定義（.jpg対応済み）
 const TYPE_DATA = {
@@ -161,6 +180,9 @@ document.getElementById("diagnosis-form").addEventListener("submit", async (e) =
     score1, score2, score3, typeKey, adviceKey
   });
 
+  // Analytics イベント送信
+  trackEvent("diagnosis_complete", { sprint_type: typeKey });
+
   // Firebaseへ匿名保存（ルール準拠）
   try {
     await push(ref(db, "diagnostics"), {
@@ -287,8 +309,18 @@ function renderResult(data) {
   resultSec.scrollIntoView({ behavior: "smooth" });
 }
 
+// X・Threads クリック計測
+document.getElementById("btn-share-x").addEventListener("click", () => {
+  trackEvent("share_click", { platform: "x" });
+});
+
+document.getElementById("btn-share-threads").addEventListener("click", () => {
+  trackEvent("share_click", { platform: "threads" });
+});
+
 // 診断カードを画像保存
 document.getElementById("btn-save-img").addEventListener("click", async () => {
+  trackEvent("save_image");
   const card = document.getElementById("share-card");
   const canvas = await html2canvas(card, {
     backgroundColor: "#0b1020",
@@ -301,16 +333,23 @@ document.getElementById("btn-save-img").addEventListener("click", async () => {
   link.click();
 });
 
-// Instagramでシェア（スマホは共有メニューで画像を直接渡す／PCは画像保存）
-document.getElementById("btn-share-ig").addEventListener("click", async () => {
-  const card = document.getElementById("share-card");
-  const canvas = await html2canvas(card, {
-    backgroundColor: "#0b1020",
-    scale: 2,
-    useCORS: true
-  });
+// Instagramでシェア
+document.getElementById("btn-share-ig").addEventListener("click", async (e) => {
+  trackEvent("share_click", { platform: "instagram" });
+  const btn = e.currentTarget;
+  const originalText = btn.textContent;
+  btn.textContent = "画像を作成中...";
+  btn.disabled = true;
 
-  canvas.toBlob(async (blob) => {
+  try {
+    const card = document.getElementById("share-card");
+    const canvas = await html2canvas(card, {
+      backgroundColor: "#0b1020",
+      scale: 2,
+      useCORS: true
+    });
+
+    const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/png"));
     const file = new File([blob], "sprint-diagnosis.png", { type: "image/png" });
 
     if (navigator.canShare && navigator.canShare({ files: [file] })) {
@@ -320,16 +359,21 @@ document.getElementById("btn-share-ig").addEventListener("click", async () => {
           title: "100mスプリント診断",
           text: "100mスプリント診断の結果！ #陸上 #100m"
         });
+        return;
       } catch (err) {
-        // キャンセル時は何もしない
+        if (err.name === "AbortError") return;
       }
-    } else {
-      // PCや非対応ブラウザ向けフォールバック
-      const link = document.createElement("a");
-      link.download = "sprint-diagnosis.png";
-      link.href = canvas.toDataURL("image/png");
-      link.click();
-      alert("診断カードの画像を保存しました！Instagramアプリを開いてストーリーズや投稿に選択してください。");
     }
-  }, "image/png");
+
+    const link = document.createElement("a");
+    link.download = "sprint-diagnosis.png";
+    link.href = canvas.toDataURL("image/png");
+    link.click();
+    alert("診断カードの画像を保存しました！Instagramアプリを開いてストーリーズや投稿に選択してください。");
+  } catch (err) {
+    alert("画像の作成に失敗しました。スクリーンショットで保存してください。");
+  } finally {
+    btn.textContent = originalText;
+    btn.disabled = false;
+  }
 });
