@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>100mスプリント診断｜30m・60m・100mからタイプと目標目安を分析</title>
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+</head>
+<body>
+  <div class="container">
+    <header class="header">
+      <h1>SPRINT ANALYZER</h1>
+      <p>30m・60m・100mのタイムから<br>走りのタイプと目標達成の目安を診断</p>
+    </header>
+
+    <!-- 入力フォーム -->
+    <section class="panel input-panel">
+      <form id="diagnosis-form">
+        <div class="input-grid">
+          <div class="form-group">
+            <label for="t30">30m タイム (秒)</label>
+            <input type="number" id="t30" step="0.01" min="2.5" max="10.0" inputmode="decimal" placeholder="例: 3.85" required />
+          </div>
+          <div class="form-group">
+            <label for="t60">60m タイム (秒)</label>
+            <input type="number" id="t60" step="0.01" min="5.0" max="18.0" inputmode="decimal" placeholder="例: 6.90" required />
+          </div>
+          <div class="form-group">
+            <label for="t100">100m タイム (秒)</label>
+            <input type="number" id="t100" step="0.01" min="9.0" max="25.0" inputmode="decimal" placeholder="例: 11.50" required />
+          </div>
+          <div class="form-group">
+            <label for="target100">目標 100m (秒)</label>
+            <input type="number" id="target100" step="0.01" min="9.0" max="25.0" inputmode="decimal" placeholder="例: 11.00" required />
+          </div>
+        </div>
+
+        <!-- 計測条件（折りたたみ） -->
+        <details class="options-accordion">
+          <summary>計測条件を細かく設定する（デフォルト：30/60m手動・動き出し、100m電気）</summary>
+          <div class="options-content">
+            <div class="option-row">
+              <label for="timing30_60">30m・60mの計測方法</label>
+              <select id="timing30_60">
+                <option value="manual" selected>手動（ストップウォッチ）</option>
+                <option value="auto">電気・光電管</option>
+              </select>
+            </div>
+            <div class="option-row">
+              <label for="start30_60">30m・60mのスタート</label>
+              <select id="start30_60">
+                <option value="self" selected>動き出し計測（自発）</option>
+                <option value="signal">合図あり（反応時間込み）</option>
+              </select>
+            </div>
+            <div class="option-row">
+              <label for="timing100">100mの計測方法</label>
+              <select id="timing100">
+                <option value="auto" selected>電気（試合・光電管）</option>
+                <option value="manual">手動（ストップウォッチ）</option>
+              </select>
+            </div>
+            <div class="option-row">
+              <label for="wind100">100mの風速 (m/s)</label>
+              <input type="number" id="wind100" step="0.1" min="-10.0" max="10.0" value="0.0" inputmode="decimal" />
+            </div>
+          </div>
+        </details>
+
+        <p id="error-msg" class="error-msg hidden"></p>
+        <button type="submit" class="btn-primary">自分のタイプを診断する</button>
+      </form>
+    </section>
+
+    <!-- 結果エリア -->
+    <section id="result-section" class="hidden">
+      <!-- SNSシェア用 診断カード -->
+      <div id="share-card" class="share-card">
+        <div class="card-badge">YOUR SPRINT TYPE</div>
+        <h2 id="type-name" class="type-name"></h2>
+        <p id="type-catchcopy" class="type-catchcopy"></p>
+
+        <div class="card-image-wrap">
+          <img id="type-image" src="" alt="タイプピクトグラム" crossorigin="anonymous" />
+        </div>
+
+        <p id="type-desc" class="type-desc"></p>
+
+        <div class="chart-wrap">
+          <canvas id="scoreChart"></canvas>
+        </div>
+
+        <div class="card-footer">
+          <span id="card-summary-time"></span>
+          <span class="card-brand">SPRINT ANALYZER</span>
+        </div>
+      </div>
+
+      <!-- アクションボタン -->
+      <div class="action-buttons">
+        <button id="btn-save-img" class="btn-secondary">📸 診断カードを画像で保存</button>
+        <a id="btn-share-x" class="btn-x" href="#" target="_blank" rel="noopener noreferrer">𝕏 結果をシェアする</a>
+      </div>
+
+      <!-- 目標タイム達成ロードマップ -->
+      <div class="panel">
+        <h3 class="section-title">🎯 目標タイム達成の目安</h3>
+        <p class="section-note">※電気・無風基準に換算した比較と、選択した条件での練習目安です。</p>
+        <div class="table-wrap">
+          <table class="target-table">
+            <thead>
+              <tr>
+                <th>区間</th>
+                <th>現在(換算)</th>
+                <th>目標目安</th>
+                <th>差分</th>
+                <th>練習目安</th>
+              </tr>
+            </thead>
+            <tbody id="target-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- 課題別アドバイス -->
+      <div class="panel">
+        <h3 class="section-title">💡 ワンポイントアドバイス</h3>
+        <h4 id="advice-title" class="advice-title"></h4>
+        <p id="advice-text" class="advice-text"></p>
+        <div class="menu-box">
+          <span class="menu-label">おすすめ練習メニュー</span>
+          <ul id="advice-menus"></ul>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>
