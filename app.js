@@ -128,7 +128,7 @@ document.getElementById("diagnosis-form").addEventListener("submit", async (e) =
   const timing100 = document.getElementById("timing100").value;
   const wind100 = parseFloat(document.getElementById("wind100").value) || 0;
 
-  // 補正値計算
+  // 補正値計算（自己計測: 0.00s / 計測員あり: +0.24s / 動き出し: +0.15s）
   const offset30_60 = (timing30_60 === "manual" ? 0.24 : 0) + (start30_60 === "self" ? 0.15 : 0);
   const offset100 = (timing100 === "manual" ? 0.24 : 0) + (0.05 * wind100);
 
@@ -187,7 +187,7 @@ document.getElementById("diagnosis-form").addEventListener("submit", async (e) =
   try {
     await push(ref(db, "diagnostics"), {
       createdAt: serverTimestamp(),
-      modelVersion: "v1",
+      modelVersion: "v1.1",
       raw: {
         t30, t60, t100, target100,
         timing30_60, start30_60, timing100, wind100
