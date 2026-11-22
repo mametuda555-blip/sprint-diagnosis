@@ -219,28 +219,42 @@ body {
 }
 
 .btn-secondary,
-.btn-x {
+.btn-x,
+.btn-threads,
+.btn-instagram {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 12px;
+  padding: 12px 8px;
   border-radius: 10px;
   font-size: 0.85rem;
   font-weight: 700;
   text-decoration: none;
   cursor: pointer;
+  border: 1px solid transparent;
 }
 
 .btn-secondary {
   background: #1e293b;
   color: var(--text);
-  border: 1px solid var(--border);
+  border-color: var(--border);
 }
 
 .btn-x {
   background: #000000;
   color: #ffffff;
-  border: 1px solid #334155;
+  border-color: #334155;
+}
+
+.btn-threads {
+  background: #101010;
+  color: #ffffff;
+  border-color: #475569;
+}
+
+.btn-instagram {
+  background: linear-gradient(135deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%);
+  color: #ffffff;
 }
 
 /* テーブル・アドバイス */
